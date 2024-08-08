@@ -36,6 +36,7 @@ func TestServer(t *testing.T) {
 
 	// broadcast per 5s
 	go func() {
+		fmt.Print("skip test in go test")
 		for {
 			time.Sleep(time.Second * 5)
 			srv.RangeSession(func(sess erpc.Session) bool {

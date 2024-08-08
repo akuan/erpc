@@ -222,6 +222,7 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 		return nil
 	})
 	if err != nil {
+		Errorf("Dial fail : %s", err.Error())
 		return nil, statDialFailed.Copy(err)
 	}
 

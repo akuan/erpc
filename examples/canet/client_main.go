@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	"github.com/andeya/erpc/v7"
@@ -16,19 +17,22 @@ func main() {
 	}
 	defer erpc.SetLoggerLevel("DEBUG")()
 
-	cli := erpc.NewPeer(erpc.PeerConfig{RedialTimes: -1, RedialInterval: time.Second})
+	cli := erpc.NewPeer(erpc.PeerConfig{Network: "tcp4", RedialTimes: 3, RedialInterval: time.Millisecond * 20, DialTimeout: time.Second * 5})
 	defer cli.Close()
-	cli.SetTLSConfig(erpc.GenerateTLSConfigForClient())
+	//cli.SetTLSConfig(erpc.GenerateTLSConfigForClient())
 
 	cli.RoutePush(new(Push))
 
 	cli.SubRoute("/cli").
 		RoutePush(new(Push))
-
-	sess, stat := cli.Dial(":9090")
+	canetServer := "192.168.1.178:4001"
+	log.Printf("connect to %s \r\n", canetServer)
+	sess, stat := cli.Dial(canetServer)
 	if !stat.OK() {
+		log.Printf("connect fail %v \r\n", stat)
 		erpc.Fatalf("%v", stat)
 	}
+	log.Printf("connect success RemoteAddr=%s,LocalAddr=%s\r\n", sess.RemoteAddr().String(), sess.LocalAddr().String())
 
 	var result int
 	stat = sess.Call("/math/add",

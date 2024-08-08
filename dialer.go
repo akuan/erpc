@@ -97,6 +97,8 @@ func (d *Dialer) dialWithRetry(addr, sessID string, fn func(conn net.Conn) error
 		if err == nil {
 			return conn, nil
 		}
+	} else {
+		Errorf("dialOne error:%s", err.Error())
 	}
 	redialTimes := d.newRedialCounter()
 	for redialTimes.Next() {
@@ -136,10 +138,12 @@ func (d *Dialer) dialOne(addr string) (net.Conn, error) {
 		if tlsConf == nil {
 			tlsConf = GenerateTLSConfigForClient()
 		}
+		Debugf("trying to DialAddrContext... (network:%s, addr:%s)", d.network, addr)
 		return quic.DialAddrContext(ctx, network, d.localAddr.(*FakeAddr).udpAddr, addr, tlsConf, nil)
 	}
 
 	if network := asKCP(d.network); network != "" {
+		Debugf("trying to asKCP... (network:%s, addr:%s)", d.network, addr)
 		return kcp.DialAddrContext(network, d.localAddr.(*FakeAddr).udpAddr, addr, d.tlsConfig, dataShards, parityShards)
 	}
 	dialer := &net.Dialer{
@@ -147,8 +151,10 @@ func (d *Dialer) dialOne(addr string) (net.Conn, error) {
 		Timeout:   d.dialTimeout,
 	}
 	if d.tlsConfig != nil {
+		Debugf("trying to DialWithDialer... (network:%s, addr:%s)", d.network, addr)
 		return tls.DialWithDialer(dialer, d.network, addr, d.tlsConfig)
 	}
+	Debugf("trying to Dial... (network:%s, addr:%s)", d.network, addr)
 	return dialer.Dial(d.network, addr)
 }
 

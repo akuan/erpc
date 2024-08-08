@@ -2,6 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/akuan/erpc/v7 v7.2.1 h1:JBA2A5UcO5tF15GmokkNhAcZozS0ZKgRcNH4/6iu0cI=
 github.com/akuan/erpc/v7 v7.2.1/go.mod h1:JIIWnXiAjNHaoRufEIsw8UEuaMC5oyKifvooBzAmilg=
+github.com/akuan/erpc/v7 v7.2.9 h1:JBA2A5UcO5tF15GmokkNhAcZozS0ZKgRcNH4/6iu0cI=
+github.com/akuan/erpc/v7 v7.2.9/go.mod h1:JIIWnXiAjNHaoRufEIsw8UEuaMC5oyKifvooBzAmilg=
 github.com/andeya/cfgo v0.0.0-20220626152948-7980c5d761c8 h1:2+qycdjXX/+EOQ3Rxkt39P5Vy5aQ0GeidW/6L4YWxtA=
 github.com/andeya/cfgo v0.0.0-20220626152948-7980c5d761c8/go.mod h1:tVXGyZHyEkmXSzfmP5P3r4ymUI70sKFMaVqEsRnYtBE=
 github.com/andeya/goutil v1.0.0 h1:ZBF/1dParfzTTiZ3SivkrV3Rd50SnXPqqf4IRvULvNQ=

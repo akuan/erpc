@@ -22,9 +22,8 @@ func main() {
 	//cli.SetTLSConfig(erpc.GenerateTLSConfigForClient())
 
 	cli.RoutePush(new(Push))
+	cli.SubRoute("/cli").RoutePush(new(Push))
 
-	cli.SubRoute("/cli").
-		RoutePush(new(Push))
 	canetServer := "192.168.1.178:4001"
 	log.Printf("connect to %s \r\n", canetServer)
 	sess, stat := cli.Dial(canetServer)
@@ -35,23 +34,15 @@ func main() {
 	log.Printf("connect success RemoteAddr=%s,LocalAddr=%s\r\n", sess.RemoteAddr().String(), sess.LocalAddr().String())
 
 	var result int
-	stat = sess.Call("/math/add",
+	stat = sess.Push("/math/add",
 		[]int{1, 2, 3, 4, 5},
-		&result,
-		erpc.WithAddMeta("author", "andeya"),
-	).Status()
+	)
 	if !stat.OK() {
 		erpc.Fatalf("%v", stat)
 	}
 	erpc.Printf("result: %d", result)
 	erpc.Printf("Wait 10 seconds to receive the push...")
 	time.Sleep(time.Second * 10)
-
-	stat = sess.Call("/srv/math/v2/add_2",
-		[]int{10, 20, 30, 40, 50},
-		&result,
-		erpc.WithSetMeta("push_status", "yes"),
-	).Status()
 }
 
 // Push push handler

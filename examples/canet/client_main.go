@@ -35,7 +35,7 @@ func main() {
 
 	var result int
 	stat = sess.Push("/math/add",
-		[]int{1, 2, 3, 4, 5},
+		[]byte{0x01, 0x0b},
 	)
 	if !stat.OK() {
 		erpc.Fatalf("%v", stat)

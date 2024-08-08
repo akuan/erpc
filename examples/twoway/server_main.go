@@ -1,8 +1,7 @@
-package twoway
+package main
 
 import (
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/andeya/erpc/v7"
@@ -11,10 +10,10 @@ import (
 
 //go:generate go test -v -c -o "${GOPACKAGE}_server" $GOFILE
 
-func TestServer(t *testing.T) {
+func main() {
 	if goutil.IsGoTest() {
 		fmt.Print("skip test in go test")
-		t.Log("skip test in go test")
+		//t.Log("skip test in go test")
 		return
 	}
 	defer erpc.FlushLogger()
@@ -36,6 +35,7 @@ func TestServer(t *testing.T) {
 
 	// broadcast per 5s
 	go func() {
+		fmt.Print("skip test in go test")
 		for {
 			time.Sleep(time.Second * 5)
 			srv.RangeSession(func(sess erpc.Session) bool {

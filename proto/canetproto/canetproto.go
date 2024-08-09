@@ -1,6 +1,6 @@
 // Package canetProto is implemented canet style socket communication protocol.
 //
-// Copyright 2018 HenryLee. All Rights Reserved.
+// Copyright 2024 akuan. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"math"
 	"strconv"
 	"sync"
 
@@ -43,8 +42,8 @@ type canetProto struct {
 // NOTE: it is the use for canet data send and receive, actually it doesn't have header data.
 var CanetProtoFunc = func(rw socket.IOWithReadBuffer) socket.Proto {
 	return &canetProto{
-		id:   6,
-		name: "raw",
+		id:   'c',
+		name: "canet",
 		r:    rw,
 		w:    rw,
 	}
@@ -55,91 +54,56 @@ func (r *canetProto) Version() (byte, string) {
 	return r.id, r.name
 }
 
-// Pack writes the Message into the connection.
+// Pack writes the Message into the connection. path=tid,data=body
 // NOTE: Make sure to write only once or there will be package contamination!
-// nolint:ineffassign
 func (r *canetProto) Pack(m socket.Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
-	// fake size
-	err := binary.Write(bb, binary.BigEndian, uint32(0))
-
-	// transfer pipe
-	bb.WriteByte(byte(m.XferPipe().Len()))
-	bb.Write(m.XferPipe().IDs())
-
-	prefixLen := bb.Len()
-
-	// header
-	err = r.writeHeader(bb, m)
-	if err != nil {
-		return err
-	}
-
-	// body
-	err = r.writeBody(bb, m)
-	if err != nil {
-		return err
-	}
-
-	// do transfer pipe
-	payload, err := m.XferPipe().OnPack(bb.B[prefixLen:])
-	if err != nil {
-		return err
-	}
-	bb.B = append(bb.B[:prefixLen], payload...)
-
-	// set and check message size
-	err = m.SetSize(uint32(bb.Len()))
-	if err != nil {
-		return err
-	}
-
-	// reset real size
-	binary.BigEndian.PutUint32(bb.B, m.Size())
-
-	// real write
-	_, err = r.w.Write(bb.B)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
-func (r *canetProto) writeHeader(bb *utils.ByteBuffer, m socket.Message) error {
-	seqStr := strconv.FormatInt(int64(m.Seq()), 36)
-	bb.WriteByte(byte(len(seqStr)))
-	bb.Write(goutil.StringToBytes(seqStr))
-
-	bb.WriteByte(m.Mtype())
-
-	serviceMethod := goutil.StringToBytes(m.ServiceMethod())
-	serviceMethodLength := len(serviceMethod)
-	if serviceMethodLength > math.MaxUint8 {
-		return errors.New("raw proto: not support service method longer than 255")
-	}
-	bb.WriteByte(byte(serviceMethodLength))
-	bb.Write(serviceMethod)
-	statusBytes := m.Status(true).EncodeQuery()
-	binary.Write(bb, binary.BigEndian, uint16(len(statusBytes)))
-	bb.Write(statusBytes)
-
-	metaBytes := m.Meta().QueryString()
-	binary.Write(bb, binary.BigEndian, uint16(len(metaBytes)))
-	bb.Write(metaBytes)
-	return nil
-}
-
-func (r *canetProto) writeBody(bb *utils.ByteBuffer, m socket.Message) error {
-	bb.WriteByte(m.BodyCodec())
+	//A canet data frame can only send 8 bytes of data
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
 		return err
 	}
-	bb.Write(bodyBytes)
-	return nil
+	tid, err := strconv.Atoi(m.ServiceMethod())
+	if err != nil {
+		return err
+	}
+	Max_frame_size := 8
+	dataLen := len(bodyBytes)
+	frameDataLen := dataLen
+	remainLen := dataLen
+	for remainLen > 0 {
+		//over than 8 bytes, split
+		if remainLen > Max_frame_size {
+			frameDataLen = Max_frame_size
+		} else {
+			frameDataLen = remainLen
+		}
+		//canet frame header
+		bb.WriteByte(byte(frameDataLen))
+		//tid
+		err = binary.Write(bb, binary.BigEndian, uint32(tid))
+		if err != nil {
+			return err
+		}
+		//write data
+		writedLen := dataLen - remainLen
+		bb.Write(bodyBytes[writedLen:frameDataLen])
+		//feed to 8 bytes
+		if frameDataLen < Max_frame_size {
+			for i := 0; i < Max_frame_size-frameDataLen; i++ {
+				bb.WriteByte(0)
+			}
+		}
+		remainLen -= frameDataLen
+		_, err = r.w.Write(bb.B)
+		if err != nil {
+			return err
+		}
+		bb.Reset()
+	}
+	return err
 }
 
 // Unpack reads bytes from the connection to the Message.

@@ -42,7 +42,15 @@ canet frame data format(Big Endian):
     <td>0</td>
   </tr>
 </table>
- 
+
+### All existed protocals
+h-http
+j-json
+p-protobuf
+6-raw
+b-thrift-binary
+s-thrift-struct
+c-canet
 
 ### Usage
 

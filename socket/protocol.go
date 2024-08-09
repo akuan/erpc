@@ -116,10 +116,14 @@ func (r *rawProto) Pack(m Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
-	// fake size
+	// fake size {4 bytes message length}
 	err := binary.Write(bb, binary.BigEndian, uint32(0))
-
-	// transfer pipe
+	if err != nil {
+		return err
+	}
+	// transfer pipe {1 byte protocol version} # 6
+	//{1 byte transfer pipe length}
+	//{transfer pipe IDs}
 	bb.WriteByte(byte(m.XferPipe().Len()))
 	bb.Write(m.XferPipe().IDs())
 
@@ -163,10 +167,13 @@ func (r *rawProto) Pack(m Message) error {
 }
 
 func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m Message) error {
-	seqStr := strconv.FormatInt(int64(m.Seq()), 36)
-	bb.WriteByte(byte(len(seqStr)))
-	bb.Write(goutil.StringToBytes(seqStr))
 
+	seqStr := strconv.FormatInt(int64(m.Seq()), 36)
+	//{1 bytes sequence length}
+	bb.WriteByte(byte(len(seqStr)))
+	//{sequence (HEX 36 string of int32)}
+	bb.Write(goutil.StringToBytes(seqStr))
+	//{1 byte message type}
 	bb.WriteByte(m.Mtype())
 
 	serviceMethod := goutil.StringToBytes(m.ServiceMethod())
@@ -174,14 +181,19 @@ func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m Message) error {
 	if serviceMethodLength > math.MaxUint8 {
 		return errors.New("raw proto: not support service method longer than 255")
 	}
+	//{1 byte service method length}
 	bb.WriteByte(byte(serviceMethodLength))
+	//{service method}
 	bb.Write(serviceMethod)
 	statusBytes := m.Status(true).EncodeQuery()
+	//{2 bytes status length}
 	binary.Write(bb, binary.BigEndian, uint16(len(statusBytes)))
+	// {status(urlencoded)}
 	bb.Write(statusBytes)
-
 	metaBytes := m.Meta().QueryString()
+	//{2 bytes metadata length}
 	binary.Write(bb, binary.BigEndian, uint16(len(metaBytes)))
+	//{metadata(urlencoded)}
 	bb.Write(metaBytes)
 	return nil
 }

@@ -18,10 +18,13 @@ package canetproto
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"sync"
 
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/codec"
 	"github.com/andeya/erpc/v7/socket"
 	"github.com/andeya/erpc/v7/utils"
 	"github.com/andeya/goutil"
@@ -97,6 +100,10 @@ func (r *canetProto) Pack(m socket.Message) error {
 			}
 		}
 		remainLen -= frameDataLen
+		err = m.SetSize(uint32(bb.Len()))
+		if err != nil {
+			return err
+		}
 		_, err = r.w.Write(bb.B)
 		if err != nil {
 			return err
@@ -111,24 +118,39 @@ func (r *canetProto) Pack(m socket.Message) error {
 func (r *canetProto) Unpack(m socket.Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
-
-	// read message
-	err := r.readMessage(bb, m)
+	r.rMu.Lock()
+	defer r.rMu.Unlock()
+	// size
+	bb.ChangeLen(13)
+	_, err := io.ReadFull(r.r, bb.B)
 	if err != nil {
 		return err
 	}
-	// do transfer pipe
-	data, err := m.XferPipe().OnUnpack(bb.B)
-	if err != nil {
-		return err
-	}
-	// header
-	data, err = r.readHeader(data, m)
-	if err != nil {
-		return err
-	}
+	m.SetMtype(erpc.TypePush)
+	fmt.Println(bb.B)
+	payload := bb.B[5:]
+	m.SetServiceMethod("/canet")
+	m.SetBodyCodec(codec.ID_CANET)
+	m.SetSize(uint32(len(payload)))
+	return m.UnmarshalBody(payload)
+	// // read message
+	// err := r.readMessage(bb, m)
+	// if err != nil {
+	// 	return err
+	// }
+	// // do transfer pipe
+	// data, err := m.XferPipe().OnUnpack(bb.B)
+	// if err != nil {
+	// 	return err
+	// }
+	// // header
+	// data, err = r.readHeader(data, m)
+	// if err != nil {
+	// 	return err
+	// }
 	// body
-	return r.readBody(data, m)
+	//return r.readBody(data, m)
+	//return nil
 }
 
 func (r *canetProto) readMessage(bb *utils.ByteBuffer, m socket.Message) error {
@@ -197,8 +219,9 @@ func (r *canetProto) readHeader(data []byte, m socket.Message) ([]byte, error) {
 	m.SetSeq(int32(seq))
 	data = data[seqLen:]
 
+	m.SetMtype(erpc.TypePush)
 	// type
-	m.SetMtype(data[0])
+	//m.SetMtype(data[0])
 	data = data[1:]
 
 	// service method

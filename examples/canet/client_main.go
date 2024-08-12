@@ -20,7 +20,7 @@ func main() {
 	defer erpc.SetLoggerLevel("DEBUG")()
 
 	cli := erpc.NewPeer(erpc.PeerConfig{
-		Network: "tcp4", RedialTimes: -1, RedialInterval: time.Millisecond * 20, DialTimeout: time.Second * 5,
+		Network: "tcp4", RedialTimes: -1, RedialInterval: time.Millisecond * 20, DialTimeout: time.Second * 90,
 		DefaultBodyCodec: "canet",
 	})
 	defer cli.Close()
